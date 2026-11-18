@@ -1,0 +1,86 @@
+# pdf-to-pptx-omml
+
+**把 PDF 教材章节变成公式完全可编辑的 PPT**——公式转 OMML（PowerPoint 原生数学对象，双击就能改），
+不是截图、不是图片。图表按 caption 自动定位、300dpi 原图裁剪，版式经字形级审计闭环保证不压字、不溢出。
+
+> 适用：AoPS / IB / Cambridge / 国内理工科教材与讲义 → 课件。
+> 目标用户：高校教师、教研团队、课件制作者、辅导机构。
+
+## 为什么不是"又一个 PDF 转 PPT 工具"
+
+市面上工具把公式变成图片或乱码。本项目积累了一条 **44 条实战坑**打磨出的流水线
+（`references/pitfalls.md`），并把它封装成三层护栏：
+
+| 层 | 工具 | 拦截什么 |
+|---|---|---|
+| API 层 | `scripts/omml_helpers.py` | 裸文本塞公式、空基底、命名空间错位、禁用结构（m:acc / supHide）——写错当场抛异常 |
+| 静态层 | `scripts/validate_omml.py` | 解包 pptx 逐 slide 扫描转义 XML / 空元素 / 裸文本 / oMathPara 混排 + 构建脚本 lint |
+| 渲染层 | `scripts/audit_layout.py` | 对 PowerPoint 导出的 PDF 做字形级碰撞（阈值 0.40）、内容溢出、页脚计数三件套审计 |
+
+公式示例（构建出来的全部是可编辑 OMML）：分数、上下标、根号、limLow 定积分、
+列向量/矩阵（m:eqArr / m:m）、范数 ‖v‖、定界符。
+
+## 快速开始
+
+```bash
+# 依赖（Windows + Python 3.9+，需本机 PowerPoint 用于渲染核验）
+pip install pymupdf python-pptx lxml pillow pdfplumber pywin32
+
+# 1. 环境自检：构建一个含全套公式类型的 PPTX，验证 PowerPoint 能打开
+python demo/smoke_test.py
+
+# 2. 诊断你的教材（只读，免费）
+python scripts/probe_pdf.py <教材.pdf> --report 诊断.md
+
+# 3. 按 SKILL.md 工作流执行（probe → 裁图 → 构建 → 三道闸校验）
+```
+
+## 仓库结构
+
+```
+SKILL.md                  # Agent 技能主文件（工作流 + 管线判定）
+scripts/
+  probe_pdf.py            # PDF 可提取性诊断（只读）：文本层/扫描页/OCR 可疑/图数/公式密度/栏式
+  omml_helpers.py         # OMML 构造库：T/F/S/Q/SQ/RAD/LIM/PAR/ABS/CV/MX/NORM/M
+  validate_omml.py        # 静态校验器：pptx 体检 + 源码 lint
+  audit_layout.py         # 版式审计：字形碰撞 / 溢出 / 页脚三件套
+references/
+  pitfalls.md             # 44 条实战坑（按类别索引）——本仓库的核心资产
+  omml-cookbook.md        # helper 用法手册与反模式清单
+demo/
+  smoke_test.py           # 一键环境自检
+```
+
+## 工作流总览
+
+```
+probe 诊断 ──→ 定位章节 ──→ 裁图（xref 位图优先 / caption+clip 矢量）
+                                │
+                                ▼
+                     build_ppt（omml_helpers 构建公式）
+                                │
+              ┌─────────────────┼─────────────────┐
+              ▼                 ▼                 ▼
+     validate check        COM 导出 PDF        contact sheet
+     （静态扫低级错误）    audit 三件套审计     （目视审美兜底）
+              └────── 全零后才交付 ──────┘
+```
+
+## 诚实边界
+
+- 扫描版页的公式为**目视转录**，交付后需人工核对；OCR 文本层里的公式串一律不可信。
+- 表格结构不自动还原（保证阅读顺序）；加密 PDF 不处理。
+- 渲染核验依赖本机 PowerPoint（或 WPS）COM；Linux/macOS 可构建，但缺少自动审计闭环。
+- probe 报告只做只读诊断，不猜、不脑补提不出来的内容。
+
+## 路线图
+
+- [x] v0.1 开源核心：probe + OMML helper 库 + 双校验器 + 审计脚本 + 44 坑参考
+- [ ] 批量章节模式（一次跑整本书，断点续跑）
+- [ ] 多模板（学术蓝 / 极简黑白 / 学校 VI）
+- [ ] 英文教材双语注释页自动生成
+- [ ] 商业化：免费 probe + 按章付费解锁生产级流水线（支付宝 AI 付 A2M/402，评估中）
+
+## License
+
+MIT

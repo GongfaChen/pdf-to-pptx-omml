@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+demo/smoke_out.*
+demo/preview_*
+demo/test_probe.pdf
+*.egg-info/
+.venv/
