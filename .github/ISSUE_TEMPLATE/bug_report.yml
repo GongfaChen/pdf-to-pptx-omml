@@ -1,0 +1,108 @@
+name: Bug 报告
+description: 公式渲染异常、构建失败、版式压字、裁图错位等
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。**公式类问题请先跑一遍自检**，它能把「环境问题」和「代码问题」分开：
+
+        ```bash
+        python scripts/check_env.py          # 依赖矩阵 + PowerPoint COM 是否可用
+        python demo/smoke_test.py demo       # 构建 3 页样张 + 静态校验 + 渲染验收
+        ```
+
+        如果 smoke test 自己就失败，那是环境问题；如果 smoke 通过但你的教材失败，那是真实的 bug，请务必贴日志。
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 我已跑过 `python demo/smoke_test.py demo`，并把完整输出贴在下方
+          required: true
+        - label: 我已读过 README 的「诚实边界」一节（扫描版需 OCR、复杂表格按图切、LibreOffice 不能作为交付验收）
+          required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: 问题类型
+      options:
+        - 公式渲染异常（乱码 / 显示 XML 代码 / 空白 / 变成图片）
+        - 公式结构错误（分数、根号、矩阵、上下标、∫ 上下限显示不对）
+        - 版式问题（压字、溢出页边、字体错乱、行距挤压）
+        - probe 诊断不准（把文字层判成扫描版，或反之）
+        - 裁图问题（图错位 / 漏图 / 分辨率糊 / 把正文当 caption 切了）
+        - 环境与依赖（COM、pywin32、pip 安装、PowerPoint 打不开）
+        - 校验器误报（validate_omml 或 audit_layout 误判）
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: env
+    attributes:
+      label: 环境信息
+      description: 公式渲染问题高度依赖环境，请如实填写。
+      value: |
+        - 操作系统：
+        - Python 版本：
+        - PowerPoint / WPS 版本：
+        - python-pptx 版本：
+        - 安装方式（pip / conda / 其他）：
+        - 是否有管理员权限：
+    validations:
+      required: true
+
+  - type: input
+    id: source
+    attributes:
+      label: 教材类型
+      description: 文字层 PDF / 扫描版 PDF / 混合。probe 报告里的判定可以贴这里。
+      placeholder: 文字层 PDF，教材共 320 页，公式密集
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 执行：python scripts/probe_pdf.py book.pdf
+        2. probe 判定：第 216-219 页为文字层
+        3. 按 SKILL.md 构建，处理到第 218 页
+        4. 第 3 个公式（|5-12i| 那行）渲染成空白
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为 vs 实际行为
+      value: |
+        **期望**：
+
+        **实际**：
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志与截图
+      description: |
+        请粘贴完整输出（不要只截最后一行）。公式问题最好附 PowerPoint 里的截图，或 COM 导出的 PDF 页面——
+        光看 XML 无法判断是「结构错」还是「渲染错」。
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 其他线索
+      description: 例如：换一份教材是否复现、是否只发生在双栏页、audit 报的具体碰撞坐标等。
+    validations:
+      required: false

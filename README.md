@@ -1,5 +1,11 @@
 # pdf-to-pptx-omml
 
+[![Release](https://img.shields.io/github/v/release/GongfaChen/pdf-to-pptx-omml?sort=semver&color=2f81f7)](https://github.com/GongfaChen/pdf-to-pptx-omml/releases)
+[![CI](https://github.com/GongfaChen/pdf-to-pptx-omml/actions/workflows/ci.yml/badge.svg)](https://github.com/GongfaChen/pdf-to-pptx-omml/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/GongfaChen/pdf-to-pptx-omml?color=green)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20PowerPoint-0078D6?logo=windows&logoColor=white)](README.md)
+
 **把 PDF 教材章节变成公式完全可编辑的 PPT**——公式转 OMML（PowerPoint 原生数学对象，双击就能改），
 不是截图、不是图片。图表按 caption 自动定位、300dpi 原图裁剪，版式经字形级审计闭环保证不压字、不溢出。
 
@@ -69,6 +75,9 @@ references/
 demo/
   smoke_test.py           # 一键环境自检
 assets/                   # README 效果演示截图（before / after）
+.github/
+  workflows/ci.yml        # CI：self-check + lint + 构建 + 静态校验 + probe（Linux，无 COM）
+  ISSUE_TEMPLATE/         # bug / feature 表单（含环境信息与自检要求）
 ```
 
 ## 工作流总览

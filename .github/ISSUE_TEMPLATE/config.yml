@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: 先读文档：安装、依赖与环境要求
+    url: https://github.com/GongfaChen/pdf-to-pptx-omml/blob/main/README.md
+    about: 快速开始、仓库结构、诚实边界（哪些做不到）都写在这里，多数安装类问题能自助解决
+
+  - name: 公式能写成什么样：OMML cookbook
+    url: https://github.com/GongfaChen/pdf-to-pptx-omml/blob/main/references/omml-cookbook.md
+    about: 支持的公式类型、helper 用法、反模式清单——先确认你要的结构是否已覆盖
+
+  - name: 45 条实战坑
+    url: https://github.com/GongfaChen/pdf-to-pptx-omml/blob/main/references/pitfalls.md
+    about: 公式被静默丢弃、版式压字、裁图错位等已知问题的成因与解法，提 bug 前建议先搜一遍

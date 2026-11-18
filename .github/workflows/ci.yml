@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: checks (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pymupdf python-pptx lxml pillow
+
+      # 闸 1：API 层护栏自检（含空基底抛错回归）
+      - name: OMML helper self-check
+        run: python scripts/omml_helpers.py
+
+      # 纯 Python Ed25519，RFC 8032 官方向量 + 篡改/过期/越权回归
+      - name: License self-test
+        run: python scripts/license_check.py --self-test
+
+      # 构建脚本源码 lint（禁用结构 / 反模式）
+      - name: Source lint
+        run: python scripts/validate_omml.py lint scripts/*.py demo/smoke_test.py
+
+      # 闸 2 静态部分：构建 3 页样张并做 pptx 体检。
+      # Linux runner 上没有 PowerPoint COM，smoke_test 会打印 SKIP 并正常退出——
+      # 这是设计内的行为，渲染验收必须在装有 PowerPoint 的机器上做。
+      - name: Build deck + static validation
+        run: python demo/smoke_test.py demo
+
+      - name: Probe on synthetic PDF
+        run: |
+          python -c "import pymupdf; d=pymupdf.open(); p=d.new_page(); p.insert_text((40,60),'Chapter 1. Test page with text layer'); d.save('demo/ci_sample.pdf')"
+          python scripts/probe_pdf.py demo/ci_sample.pdf
+
+      - name: Upload built deck
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-deck-py${{ matrix.python-version }}
+          path: demo/smoke_out.pptx
+          if-no-files-found: warn

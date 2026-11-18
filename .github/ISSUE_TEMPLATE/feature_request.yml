@@ -1,0 +1,69 @@
+name: 功能请求
+description: 新公式类型、版式模板、批量处理、教材适配等
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        欢迎提需求。**请尽量说明你的真实场景**——这个项目的每个功能都是从真实教材里踩出来的，
+        「我要处理哪本书、卡在哪一步」比「希望支持 X」有用得多。
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 需求方向
+      options:
+        - 新公式类型（OMML helper 未覆盖的结构）
+        - 版式与模板（配色、字号、学校 VI、母版）
+        - 批量处理（一次跑整本书、断点续跑）
+        - 教材适配（特定出版社 / 特定语言 / 特殊栏式）
+        - 裁图与图表（矢量图、三维图、跨页图）
+        - 校验与审计（新的检查项、更准的阈值）
+        - 文档与教程
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: scenario
+    attributes:
+      label: 使用场景
+      description: 你在做什么、卡在哪一步、现在的做法是什么。
+      placeholder: |
+        我在备《材料力学》的课件，教材是扫描版 + 文字层混合，第 3 章开始有大量带上下限的积分，
+        现在的 helper 写 limLow 要手拼 m:nary，每次都得查参考文档，希望能有一个更高层的封装。
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 你希望它怎么工作
+      description: 有 API 草稿、伪代码、或者参考实现都可以贴。没有也没关系，说清期望效果即可。
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 对你的影响程度
+      options:
+        - 阻塞——不解决就没法用
+        - 很影响——每次都要手动绕过
+        - 有点麻烦——能忍但想改善
+        - 锦上添花
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: 参与意愿
+      options:
+        - label: 我愿意提供样张 PDF 页面或截图协助复现
+          required: false
+        - label: 我愿意提 PR 实现（需要的话可以先讨论方案）
+          required: false
+        - label: 这是付费版能力（批量流水线 / 多模板），我愿意为之付费
+          required: false
