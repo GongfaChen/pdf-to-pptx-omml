@@ -6,6 +6,21 @@
 > 适用：AoPS / IB / Cambridge / 国内理工科教材与讲义 → 课件。
 > 目标用户：高校教师、教研团队、课件制作者、辅导机构。
 
+## 效果演示：真实教材 before / after
+
+**Before** —— AoPS Precalculus 第 6.2 节教材原页（Problem 6.11–6.12，公式与图形混排）：
+
+![before: 教材原页](assets/before_textbook_p218.jpg)
+
+**After** —— 同一节内容提取成的课件。所有公式（根号、上标、绝对值、下标）
+均为 **原生 OMML**：双击即可编辑，可改字体、可复制进 Word/LaTeX，不是截图、不是图片。
+
+![after: 概念页](assets/after_slide_magnitude.png)
+
+![after: 解题页](assets/after_slide_solution_6_12.jpg)
+
+> 注：教材页面截图仅作效果展示，版权归 AoPS 所有；工具只处理用户自有的文件。
+
 ## 为什么不是"又一个 PDF 转 PPT 工具"
 
 市面上工具把公式变成图片或乱码。本项目积累了一条 **45 条实战坑**打磨出的流水线
@@ -52,6 +67,7 @@ references/
   omml-cookbook.md        # helper 用法手册与反模式清单
 demo/
   smoke_test.py           # 一键环境自检
+assets/                   # README 效果演示截图（before / after）
 ```
 
 ## 工作流总览
