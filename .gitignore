@@ -5,3 +5,4 @@ demo/preview_*
 demo/test_probe.pdf
 *.egg-info/
 .venv/
+demo/crop_test/

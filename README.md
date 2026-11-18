@@ -8,7 +8,7 @@
 
 ## 为什么不是"又一个 PDF 转 PPT 工具"
 
-市面上工具把公式变成图片或乱码。本项目积累了一条 **44 条实战坑**打磨出的流水线
+市面上工具把公式变成图片或乱码。本项目积累了一条 **45 条实战坑**打磨出的流水线
 （`references/pitfalls.md`），并把它封装成三层护栏：
 
 | 层 | 工具 | 拦截什么 |
@@ -44,8 +44,11 @@ scripts/
   omml_helpers.py         # OMML 构造库：T/F/S/Q/SQ/RAD/LIM/PAR/ABS/CV/MX/NORM/M
   validate_omml.py        # 静态校验器：pptx 体检 + 源码 lint
   audit_layout.py         # 版式审计：字形碰撞 / 溢出 / 页脚三件套
+  check_env.py            # 前置环境闸（只读）：依赖矩阵 + COM ProgID + 闸 2 可执行性判定
+  crop_figures.py         # 裁图 CLI：xref 位图优先 / caption clip / prose 三判据 / 双栏 / 装订线
+  contact_sheet.py        # 拼图：带标签 contact sheet（crop_figures.py 末尾自动调用）
 references/
-  pitfalls.md             # 44 条实战坑（按类别索引）——本仓库的核心资产
+  pitfalls.md             # 45 条实战坑（按类别索引）——本仓库的核心资产
   omml-cookbook.md        # helper 用法手册与反模式清单
 demo/
   smoke_test.py           # 一键环境自检
@@ -70,12 +73,12 @@ probe 诊断 ──→ 定位章节 ──→ 裁图（xref 位图优先 / capti
 
 - 扫描版页的公式为**目视转录**，交付后需人工核对；OCR 文本层里的公式串一律不可信。
 - 表格结构不自动还原（保证阅读顺序）；加密 PDF 不处理。
-- 渲染核验依赖本机 PowerPoint（或 WPS）COM；Linux/macOS 可构建，但缺少自动审计闭环。
+- 渲染核验依赖本机 PowerPoint（或 WPS）COM；Linux/macOS 可构建，但缺少自动审计闭环——**无 COM 即公式渲染未验收**，不得据此宣布通过或交付。LibreOffice 等只认 mc:Fallback 的渲染器仅可用于版式粗看，其导出的 PDF 禁止作为交付物。
 - probe 报告只做只读诊断，不猜、不脑补提不出来的内容。
 
 ## 路线图
 
-- [x] v0.1 开源核心：probe + OMML helper 库 + 双校验器 + 审计脚本 + 44 坑参考
+- [x] v0.1 开源核心：probe + OMML helper 库 + 双校验器 + 审计脚本 + 45 坑参考
 - [ ] 批量章节模式（一次跑整本书，断点续跑）
 - [ ] 多模板（学术蓝 / 极简黑白 / 学校 VI）
 - [ ] 英文教材双语注释页自动生成

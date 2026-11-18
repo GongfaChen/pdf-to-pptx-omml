@@ -11,8 +11,22 @@ description: 从 PDF 教材/讲义提取章节内容生成专业 PPTX（正文 2
 ## 流程总览
 
 ```
-probe（诊断）→ 定位章节 → 裁图 → 构建 PPTX → 静态校验 → COM 导出 PDF → 版式审计 → 交付
+前置 A（环境闸）→ probe（诊断）→ 定位章节 → 裁图 → 构建 PPTX → 静态校验 → COM 导出 PDF → 版式审计 → 交付
 ```
+
+## 前置 A · 环境闸（scripts/check_env.py）
+
+开工先跑只读环境闸，确认依赖矩阵与 COM 闸能不能跑（不打开 PowerPoint、不导出、不修改任何文件）：
+
+```bash
+python scripts/check_env.py
+```
+
+输出：7 项依赖（fitz/pptx/lxml/PIL/pdfplumber/win32com/pythoncom）的 OK/MISSING 矩阵与缺失项安装命令、
+PowerPoint/WPS COM ProgID 是否注册，以及闸 2（公式原生渲染核验）的结论。命名「前置 A」是为了不与下面的「第 0 步 · probe 诊断」撞号。
+
+- **有 COM**（pywin32 + PowerPoint/WPS 均可用）：闸 2 可执行，交付前必须 `pres.SaveAs(pdf, 32)` 并核验 CambriaMath 字形 / 无 `[formula]` 占位。
+- **无 COM**：闸 2 不可执行 → **公式渲染未验收**，不得据此宣布通过或交付；LibreOffice 等只认 `mc:Fallback` 的渲染器导出的 PDF 禁止作为交付物（与下方「诚实边界」一致）。
 
 ## 第 0 步 · probe 诊断（只读，先判管线）
 
@@ -37,21 +51,43 @@ python scripts/probe_pdf.py <教材.pdf> --report 诊断.md
 
 ## 第 2 步 · 裁剪图表
 
-- 优先判断图是嵌入位图还是矢量：位图用 `get_image_info(xrefs=True)` + xref 原分辨率提取（坑 16）；
-  矢量才用 caption 定位 + clip 渲染（`Matrix(3,3)`，300dpi PNG）。
-- caption 匹配规则与 prose 判别三判据见坑 28/41；双栏版式按中缝分左右栏定裁剪框。
-- 扫描页先查装订线色条（坑 42，probe 已标出）。PIL 拼 contact sheet 逐张视觉校验，混入正文的重裁。
+直接调用 `scripts/crop_figures.py`（把坑 16/28/41/42 的裁图规则固化成 CLI，只读 PDF，产出 `assets/` + `preview/` + `crop_report.md`）：
+
+```bash
+python scripts/crop_figures.py <教材.pdf> --out <目录> [--dpi 300] [--cols 4]
+```
+
+规则链（脚本内已实现，无需手写）：
+
+- **xref 位图优先**：`get_image_info(xrefs=True)` 拿 bbox，按 xref 原分辨率提取（坑 16）；同 bbox 另渲染一张 300dpi clip 作对照。
+- **caption clip**：矢量/文字页用带标点的严格 caption 匹配（坑 41）定位，clip 渲染 300dpi PNG。
+- **prose 三判据**（坑 28）：`prose_ratio ≥ 0.86` + `longest_word ≥ 4` + `y1 ≥ 58`，命中即判为正文并跳过该裁剪（「混入正文的重裁」）；区域无矢量绘图/位图也跳过。
+- **双栏**：按中缝分左右栏定裁剪框（坑 28）。
+- **装订线**：像素级扫描边缘饱和色竖线，裁剪 x0 移到线右侧（坑 42）；PIL 差分白边 trim 兜底。
+
+拼图用 `scripts/contact_sheet.py`（也可单独跑，或由 `crop_figures.py` 在裁图末尾自动调用），输出 `preview/contact_sheet.png` 逐张视觉校验：
+
+```bash
+python scripts/contact_sheet.py <assets目录|图片...> --out preview/contact_sheet.png [--cols 4]
+```
 
 ## 第 3 步 · 构建 PPTX（omml_helpers）
 
 用 `scripts/omml_helpers.py` 构造公式，**不要手写 OMML XML**——库已把坑 1/3/6/10/11/12/35 在 API 层堵死
 （裸 str 自动包 T()、空基底抛错、a14 命名空间自动声明、无 m:acc/supHide）。用法见 `references/omml-cookbook.md`。
 
+- **大运算符 / 方程组**：`SUM(sub, sup, body)`、`PROD(sub, sup, body)`（m:nary，∑/∏ 上下限必须同时给，坑 12）、`EQARR(*rows)`（左对齐方程组 m:eqArr，不套 `m:d`；列向量仍用 `CV`，坑 34）。示例见 cookbook。
+- **每份 deck 前调 `reset_run_style()`**：`set_run_style()` 写的是模块级全局，size/color/font 传 `None` 只表示「不修改」而非「清空」，连续构建多份 deck 会串味；重置回出厂默认后再设本 deck 样式。
+- **helper 片段拼接一律用 `M(...)`，不要用 `+`**（坑 45）：`_Frag` 是 str 子类，`T('a') + T('b')` 曾退化成普通 str 被下游当裸文本包 `T()` 转义，公式显示成 XML 字面文本；库已重载 `__add__/__radd__` 修好，但 `+` 跨版本不稳且 `validate_omml.py lint` 会报，统一用 `M(...)`。
+
 规格：16:9（13.333×7.5in）；正文 Times New Roman 20pt / line_spacing=1.4；
 display 公式**独占段落且行距 1.0**（坑 13/15）；浅色 shape 里公式必须显式设深色（坑 18）。
 
 行高预算（坑 24）：正文 ≈33.9pt/行；无分数 display ≈1.0 行，含分数 ≈1.7 行；
 每行字符数 ≈ 宽度(in)×72/8.7。溢出修法优先级：合并公式行 > 精简文案 > 拆页；**禁止全局缩字号**。
+
+- **带上下限 / 多行的「大结构」必须 `display=True` 独占段落**（坑 13/24/34）：`SUM`/`PROD`（m:nary 上下限）、`EQARR`/`CV`/`MX`（多行结构）不要内联 `display=False` 塞进正文行——smoke demo 实测 EQARR 内联导出后被挤压、贴住相邻文字，`collisions=0` 但稿件难看。
+  行高预算把这一行按 **1 行** 算（无分数 display ≈1.0 行，坑 24），而大结构实际要 ≈1.3–1.7 行（两行向量 ≈1.3 行、三行 ≈1.7 行，坑 34；含分数 ≈1.7 行，坑 24）→ 垂直溢出/挤压。若确实要行内表达，退化为单个符号（如 `∑` 或 `a_i`），而不是整段 nary/eqArr。
 
 ## 第 4 步 · 校验闭环（三道闸，缺一不可）
 
@@ -87,5 +123,5 @@ python scripts/audit_layout.py <导出的.pdf> --footer "<页脚文案>" --skip-
 
 - 扫描版页的公式为目视转录，需人工核对；OCR 文本层的公式串一律不信（坑 40）。
 - 表格结构不自动还原，仅保证阅读顺序；加密 PDF 不处理。
-- Fallback 占位文本仅在极旧渲染器显示——交付前必须走完闸 2 的 PowerPoint 原生渲染核验。
-- 环境依赖本机 PowerPoint（或 WPS）COM；Linux/macOS 无 COM 时跳过闸 2，用 LibreOffice 渲染粗核。
+- mc:Fallback 在只认 Fallback 的渲染器（如 LibreOffice）里会替换整段内容——交付前必须走完闸 2 的 PowerPoint 原生渲染核验。
+- 环境依赖本机 PowerPoint（或 WPS）COM；Linux/macOS 无 COM 时闸 2 无法执行，**公式渲染未验收**，不得据此宣布通过或交付。LibreOffice 等只认 mc:Fallback 的渲染器仅可用于版式粗看，其导出的 PDF 禁止作为交付物。

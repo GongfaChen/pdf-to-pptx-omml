@@ -1,4 +1,4 @@
-# 44 条实战坑：PDF 教材 → OMML 公式 PPT 流水线
+# 45 条实战坑：PDF 教材 → OMML 公式 PPT 流水线
 
 > 每一条都真实导致过 PowerPoint 拒开、公式消失、渲染错误或交付返工。
 > 编号与原文一致，便于溯源讨论。适用环境：Windows + python-pptx + PyMuPDF + PowerPoint COM。
@@ -12,6 +12,8 @@
 5. **整句塞进 inline oMath 不换行**：整段成为单个数学区域后渲染不换行、溢出文本框并在右缘产生碎片。应拆成「文本 run + 短数学 + 文本 run」三段。
 6. **裸字符串传给 insert**：直接嵌裸文本（坑 3 的入口形态）。用静态校验器扫全部 oMath：`<` 检测转义、结构元素直接 text 检测裸文本、空元素检测。
 7. **二分定位坏页**：按 slide 前缀重建子文件逐个试开，快速锁定问题页。
+36. **T() 内拼接/包裹 helper 输出**：`T(' ' + F('3','5'))`、`T(F('3','5'))` 会把 XML 转义成字面文本，公式显示为代码（坑 4 的同源形态）。正确写法 `M(T(' '), F('3','5'), T(' '))` 或直接传 `_Frag`；`validate_omml.py lint` 会扫这种写法。
+45. **_Frag 相加退化成 str → 下游被转义 → 公式显示成 XML**：`_Frag` 是 `str` 子类，`T('a') + T('b')` 默认走 `str.__add__`，结果不再是 `_Frag`；喂给下一个 helper 时 `_wrap` 把它当裸文本用 `T()` 包裹并转义（`F(T('a') + T('b'), '2')` 的 `m:t` 里出现 `&lt;m:r&gt;`），公式显示成原始 XML 字面文本（坑 4/36 的同源形态）。**修法**：库已重载 `_Frag.__add__/__radd__`，任意方向拼接结果都仍是 `_Frag`；但源码里拼接 helper 片段**一律用 `M(...)`、不要用 `+`**——`validate_omml.py lint` 会抓 `+` 拼接（R1 回归，跨版本也更稳）。
 
 ## B. XML / 命名空间类（PowerPoint 静默丢内容）
 
@@ -19,6 +21,7 @@
 11. **命名空间声明位置**：`xmlns:a` 声明在 `mc:AlternateContent` 根上（Fallback 里有 `a:r`/`a:t`）；`xmlns:m`+`xmlns:a` 声明在 `m:oMathPara`（display）或 `m:oMath`（inline）根上。声明放错层级 → lxml `Namespace prefix not defined`。
 12. **nary+undOvr+supHide 会丢弃整个文本框**：`m:nary`（∫）只带下限（limLoc="undOvr" + supHide=1，不写 m:sup）时，PDF 导出中该文本框**所有内容（含纯文本段）全部消失且无报错**。改用 `m:limLow`（m:e 放 ∫ run，m:lim 放下限）。排查手段：把各公式拆到独立 slide 二分测试。
 13. **oMathPara 与普通文字 run 混在同一段落** → 公式被压成 inline 小字号（分数变小、重叠）。display 公式必须独占段落；行内短公式用 inline oMath 无碍。
+33. **整段正文塞进一个 oMath**：正文与公式同处一个 `mc:AlternateContent` 时，只认 `mc:Fallback` 的渲染器会用一句占位文本整体替换，正文陪葬。正文必须走普通 `a:r`，只有公式进 AlternateContent；Fallback 默认应是片段的可读线性文本，别留 `[formula]`。
 
 ## C. 版式与布局类
 
@@ -31,6 +34,7 @@
 23. **版式审计用字形级 span 碰撞检测，不要用 block 级**：逐 span 取 bbox；交集面积/较小面积 ≥ 0.40 判为真压字。block 级会把 display 公式分子/分母拆成相邻块而大量误报；下标与基底轻微相交（~0.30）属正常。另两项：内容最低点 ≤ 页脚上缘；每页页脚对象数 = 1。
 24. **行高预算（20pt/1.4 实测）**：正文 ≈33.9 pt/行；无分数 display 公式 ≈1.0 行，含分数 ≈1.7 行；每行字符数 ≈ 宽度(in)×72/8.7。溢出页修法优先级：合并连续 display 公式为一行 > 删冗余从句 > 拆页。**不要全局缩字号**。
 26. **解答框 top 是硬编码的**：缩短引言后不会自动上移，必须同步改 top（引言结束 y ≈ 起点 + 行数×行高，解答框 top ≥ 结束 y + 8pt）。
+27. **三件套全零不等于公式正确**：审计输入必须是 PowerPoint COM 原生导出的 PDF；若 PDF 来自只认 `mc:Fallback` 的渲染器，整页可能只剩占位文本而 collisions/overflow/footer 照样全零。审计前先确认 PDF 含 CambriaMath 字形，命中 `[formula]`/`□` 即判违规（坑 33）。
 31. **题目密集页直接拆页**（按题组分页、配图随题组走），比无限压缩文案可靠。
 32. **微溢出（<5pt）两种快速修法**：图注压线 → 图 top 上移 0.15–0.25 in；文字差 1–2pt → 精简该段为更短单行。
 37. **含多个分式的解答页按小问拆页**：各小问含 2–3 个 display 分式时一页必然溢出 40pt+，直接一小问一页。
