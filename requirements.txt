@@ -1,0 +1,17 @@
+# pdf-to-pptx-omml 运行依赖
+#
+# 安装：pip install -r requirements.txt
+# 环境自检：python demo/smoke_test.py demo
+
+# PDF 解析与渲染
+pymupdf>=1.24          # PDF 文本层/位图/页面渲染（import pymupdf）
+pdfplumber>=0.10       # 导出 PDF 的字形核验（公式渲染验收，闸 2）
+
+# PPTX 构建
+python-pptx>=0.6.21
+lxml>=4.9              # OMML XML 构造与校验
+pillow>=9.0            # 裁图后处理
+
+# 仅 Windows：PowerPoint COM 自动化（渲染验收与审计闭环必需）
+# Linux/macOS 上会被自动跳过，smoke_test 会打印 SKIP
+pywin32>=306; sys_platform == "win32"

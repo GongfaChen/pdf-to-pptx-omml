@@ -44,8 +44,8 @@
 ## 快速开始
 
 ```bash
-# 依赖（Windows + Python 3.9+，需本机 PowerPoint 用于渲染核验）
-pip install pymupdf python-pptx lxml pillow pdfplumber pywin32
+# 依赖（Python 3.9+；渲染核验需 Windows + 本机 PowerPoint）
+pip install -r requirements.txt
 
 # 1. 环境自检：构建一个含全套公式类型的 PPTX，验证 PowerPoint 能打开
 python demo/smoke_test.py
@@ -60,6 +60,7 @@ python scripts/probe_pdf.py <教材.pdf> --report 诊断.md
 
 ```
 SKILL.md                  # Agent 技能主文件（工作流 + 管线判定）
+requirements.txt          # 依赖（含 pywin32 的 Windows 平台标记）
 scripts/
   probe_pdf.py            # PDF 可提取性诊断（只读）：文本层/扫描页/OCR 可疑/图数/公式密度/栏式
   omml_helpers.py         # OMML 构造库：T/F/S/Q/SQ/RAD/LIM/PAR/ABS/CV/MX/NORM/M + SUM/PROD/EQARR
