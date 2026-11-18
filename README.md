@@ -62,6 +62,7 @@ scripts/
   check_env.py            # 前置环境闸（只读）：依赖矩阵 + COM ProgID + 闸 2 可执行性判定
   crop_figures.py         # 裁图 CLI：xref 位图优先 / caption clip / prose 三判据 / 双栏 / 装订线
   contact_sheet.py        # 拼图：带标签 contact sheet（crop_figures.py 末尾自动调用）
+  license_check.py        # 许可证钩子（Ed25519 验签，当前免费全通过，见下文）
 references/
   pitfalls.md             # 45 条实战坑（按类别索引）——本仓库的核心资产
   omml-cookbook.md        # helper 用法手册与反模式清单
@@ -100,6 +101,19 @@ probe 诊断 ──→ 定位章节 ──→ 裁图（xref 位图优先 / capti
 - [ ] 英文教材双语注释页自动生成
 - [ ] 商业化：免费 probe + 按章付费解锁生产级流水线（支付宝 AI 付 A2M/402，评估中）
 
-## License
+## License / 授权
+
+代码以 MIT 开源。`scripts/license_check.py` 是为未来付费层预埋的**许可证钩子**，
+当前对用户完全透明：
+
+- **现在**：没有 license 文件 → 所有功能免费全通过（probe 类功能永远免费）。
+  各 CLI 入口调用 `require_license(feature)`，无 license 时静默放行，行为不变。
+- **将来**：若存在 license 文件且公钥已配置，则严格 Ed25519 验签
+  （含有效期与功能范围检查）。签名无效 / 过期 / 越权分别返回退出码 2 / 3 / 4。
+  纯 Python 实现（RFC 8032），零第三方依赖，自带全链路自检：
+  `python scripts/license_check.py --self-test`
+- **切换付费层时**：`--generate-keys` 生成密钥对（私钥不进仓库）→ 替换模块内
+  `PUBLIC_KEY_HEX`（或用环境变量 `PDF2PPTX_OMML_PUBKEY` 注入）→ 新的付费脚本
+  调用 `require_license("pipeline")` 等付费 feature。老用户环境零破坏。
 
 MIT

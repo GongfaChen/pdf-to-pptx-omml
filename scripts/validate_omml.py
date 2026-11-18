@@ -148,6 +148,9 @@ def lint_sources(paths):
 
 
 def main():
+    from license_check import require_license_or_exit
+    require_license_or_exit("core")  # 无 license → 免费放行；未来付费层在此校验
+
     if len(sys.argv) < 3 or sys.argv[1] not in ("check", "lint"):
         print(__doc__)
         return 2

@@ -99,6 +99,9 @@ def audit_page(page, page_no, args):
 
 
 def main():
+    from license_check import require_license_or_exit
+    require_license_or_exit("core")  # 无 license → 免费放行；未来付费层在此校验
+
     ap = argparse.ArgumentParser()
     ap.add_argument("pdf", help="PowerPoint 导出的 PDF（pres.SaveAs(pdf, 32)）")
     ap.add_argument("--footer", default="", help="页脚文案（用于区分页脚与正文）")

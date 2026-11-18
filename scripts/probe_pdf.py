@@ -196,6 +196,9 @@ def render_markdown(pdf_path, pages, summary):
 
 
 def main():
+    from license_check import require_license_or_exit  # probe 永远免费（FREE_FEATURES）
+    require_license_or_exit("probe")
+
     ap = argparse.ArgumentParser(description="PDF 教材可提取性诊断（免费、只读）")
     ap.add_argument("pdfs", nargs="+")
     ap.add_argument("--report", help="输出 Markdown 报告路径（单文件时）")

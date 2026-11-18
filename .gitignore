@@ -6,3 +6,7 @@ demo/test_probe.pdf
 *.egg-info/
 .venv/
 demo/crop_test/
+ed25519_seed.hex
+ed25519_private*
+license.json
+_tmp_lk/

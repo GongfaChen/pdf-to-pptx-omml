@@ -262,6 +262,9 @@ def _write_report(out_dir, pdf_path, dpi, produced, report, sheet, sheet_n):
 
 
 def main():
+    from license_check import require_license_or_exit
+    require_license_or_exit("core")  # 无 license → 免费放行；未来付费层在此校验
+
     ap = argparse.ArgumentParser(description="按坑 16/28/41/42 固化裁图规则（只读 PDF）")
     ap.add_argument("pdf", help="教材 PDF")
     ap.add_argument("--out", default="crop_out", help="输出目录（assets/ + preview/ + 报告）")
