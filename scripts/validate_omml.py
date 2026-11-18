@@ -148,12 +148,17 @@ def lint_sources(paths):
 
 
 def main():
-    from license_check import require_license_or_exit
-    require_license_or_exit("core")  # 无 license → 免费放行；未来付费层在此校验
-
+    # 先解析参数，不触发 license 闸门（P2-1）：--help 永远可用，且应返回 0
+    if sys.argv[1:] and sys.argv[1] in ("-h", "--help"):
+        print(__doc__)
+        return 0
     if len(sys.argv) < 3 or sys.argv[1] not in ("check", "lint"):
         print(__doc__)
         return 2
+
+    from license_check import require_license_or_exit
+    require_license_or_exit("core")  # PAID_FEATURES 现在为空 → 免费放行
+
     mode, targets = sys.argv[1], sys.argv[2:]
     issues = check_pptx(targets[0]) if mode == "check" else lint_sources(targets)
     for i in issues:

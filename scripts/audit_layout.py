@@ -99,9 +99,6 @@ def audit_page(page, page_no, args):
 
 
 def main():
-    from license_check import require_license_or_exit
-    require_license_or_exit("core")  # 无 license → 免费放行；未来付费层在此校验
-
     ap = argparse.ArgumentParser()
     ap.add_argument("pdf", help="PowerPoint 导出的 PDF（pres.SaveAs(pdf, 32)）")
     ap.add_argument("--footer", default="", help="页脚文案（用于区分页脚与正文）")
@@ -113,6 +110,10 @@ def main():
     ap.add_argument("--report")
     args = ap.parse_args()
     args.skip_pages = {int(x) for x in args.skip_pages.split(",") if x.strip()}
+
+    # 闸门放在 argparse 之后：--help 永远可用（P2-1）
+    from license_check import require_license_or_exit
+    require_license_or_exit("core")
 
     doc = fitz.open(args.pdf)
     all_problems = []

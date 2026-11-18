@@ -8,8 +8,8 @@
   老用户环境零破坏，切换当天即生效。
 
 验证语义（退出码与 pdf-image-text 同风格）：
-  0 通过（免费模式或有效 license）
-  1 未找到 license 文件（仅 --verify 报告时出现，不算错误）
+  0 通过（免费模式或有效 license；--verify 时用 status: FREE / OK 区分）
+  1 未找到 license 文件（免费模式，非错误）／ 需要 license 的付费功能被拒
   2 签名无效
   3 已过期
   4 产品 / 功能范围不符
@@ -34,7 +34,14 @@ CLI 用法：
   python license_check.py --self-test              生成→签发→校验 全链路自检
 
 依赖：仅标准库（hashlib / json / argparse / datetime）。Ed25519 为 RFC 8032
-纯 Python 实现（点运算走仿射坐标，校验一次约几十毫秒，工具场景足够）。
+纯 Python 实现（点运算走仿射坐标，实测校验 152–163 ms/次，约 0.16 s；不做结果缓存——缓存文件
+用户可写，等于给付费闸开后门，宁可慢 150 ms）。
+
+安全模型（重要）：
+- 发布构建只信任模块内 PUBLIC_KEY_HEX；环境变量公钥仅在开发模式
+  （PDF2PPTX_OMML_DEV=1）生效，否则忽略并告警——否则用户可自签 license 绕过付费闸。
+- 无 license 文件时：FREE_FEATURES 永久免费；PAID_FEATURES 直接拒绝（退出码 1）。
+  现在 PAID_FEATURES 为空，等价于"全部免费"，上线付费层时只改这一个集合。
 """
 from __future__ import annotations
 
@@ -52,11 +59,15 @@ from pathlib import Path
 # 部署配置：上线付费层时把占位公钥替换成 --generate-keys 产出的真实公钥
 # ---------------------------------------------------------------------------
 PUBLIC_KEY_HEX = "00" * 32  # ← 占位：全零公钥 = 未配置许可体系，一律免费放行
-PUBLIC_KEY_ENV = "PDF2PPTX_OMML_PUBKEY"  # 允许用环境变量注入公钥（不重新发版即可换钥）
+PUBLIC_KEY_ENV = "PDF2PPTX_OMML_PUBKEY"  # 仅在开发模式下生效（见 _dev_mode）
+DEV_MODE_ENV = "PDF2PPTX_OMML_DEV"  # =1 时允许环境变量公钥，并禁用发布语义
 LICENSE_ENV = "PDF2PPTX_OMML_LICENSE"  # 显式指定 license 文件路径
 PRODUCT = "pdf-to-pptx-omml"
 
 FREE_FEATURES = {"probe"}  # 永远免费，无论未来如何配置
+# 上线付费层时把付费 feature 加进来（如 "pipeline"）；现在为空 = 全部免费。
+# 无 license 文件时，PAID_FEATURES 里的 feature 会以退出码 1 拒绝，其余照旧免费。
+PAID_FEATURES: frozenset[str] = frozenset()
 PLACEHOLDER_PUBKEY = "00" * 32
 
 # ---------------------------------------------------------------------------
@@ -183,6 +194,11 @@ def ed25519_verify(pub_hex: str, msg: bytes, sig_hex: str) -> bool:
     s = int.from_bytes(sig[32:], "little")
     if s >= _L:
         return False
+    # P2-4：拒绝小阶公钥（[8]A == identity）。本实现用 strict equality 比较
+    # （无 cofactor），在无 torsion 分量的诚实公钥上等价于 RFC 8032 的 cofactored
+    # 校验；但含小阶分量的公钥可让伪造签名通过，故先剔除（与 libsodium 行为一致）。
+    if _scalarmult(a_point, 8) == _IDENT:
+        return False
     h = _hint(sig[:32] + pub + msg) % _L  # RFC 8032：k = H(R ‖ A ‖ M)，必须含公钥
     s_b = _scalarmult(_B, s)
     h_a = _scalarmult(a_point, h)
@@ -209,9 +225,36 @@ class LicenseState:
     source: str = ""
 
 
+_ENV_PUBKEY_WARNED = False
+_DEV_WARNED = False
+
+
+def _dev_mode() -> bool:
+    """开发模式：PDF2PPTX_OMML_DEV=1。仅此模式允许环境变量注入公钥。"""
+    return os.environ.get(DEV_MODE_ENV, "").strip() in ("1", "true", "True", "yes")
+
+
 def _active_pubkey() -> str:
+    """发布构建只认模块内常量；环境变量公钥仅在开发模式生效（否则忽略并告警）。"""
+    global _ENV_PUBKEY_WARNED, _DEV_WARNED
     env = os.environ.get(PUBLIC_KEY_ENV, "").strip()
-    return env if env else PUBLIC_KEY_HEX
+    if not env:
+        return PUBLIC_KEY_HEX
+    if _dev_mode():
+        if not _DEV_WARNED:
+            _DEV_WARNED = True
+            print(
+                "WARNING: DEV MODE — 公钥来自环境变量，许可校验不可信（仅开发用）",
+                file=sys.stderr,
+            )
+        return env
+    if not _ENV_PUBKEY_WARNED:
+        _ENV_PUBKEY_WARNED = True
+        print(
+            "warning: 已忽略环境变量公钥（非开发模式只信任模块内 PUBLIC_KEY_HEX）",
+            file=sys.stderr,
+        )
+    return PUBLIC_KEY_HEX
 
 
 def _pubkey_configured() -> bool:
@@ -242,18 +285,24 @@ def _canonical_payload(data: dict) -> bytes:
 
 
 def require_license(feature: str = "core") -> LicenseState:
-    """所有 CLI 入口的统一闸门。当前版本：免费全通过。
+    """所有 CLI 入口的统一闸门。
 
-    未来付费层的切换点：
-    - probe 类功能永远免费（FREE_FEATURES）。
-    - 无 license 文件 → 免费/社区模式放行（保留这一行为即可维持免费层）。
-    - 付费 feature + 存在 license + 公钥已配置 → 严格验签，失败按退出码退出。
+    决策顺序（I2 / P1-2）：
+    1. FREE_FEATURES 里的 feature → 永远免费放行（probe 等）；
+    2. 没有 license 文件 → 付费 feature（PAID_FEATURES）拒绝（退出码 1），其余免费放行；
+    3. 有 license 但本构建未配置公钥 → 告警后按第 2 条规则处理；
+    4. 其余：严格验签（签名 → 产品 → 有效期 → 功能范围）。
+
+    注意：PAID_FEATURES 现在为空，所以第 2 条不会触发，行为与历史版本一致；
+    上线付费层时只改这个集合，不需要动这里的逻辑。
     """
     if feature in FREE_FEATURES:
         return LicenseState(feature=feature, mode="free", source="always-free")
 
     lic_file = _find_license_file()
     if lic_file is None:
+        if feature in PAID_FEATURES:
+            raise LicenseError(1, f"功能 {feature!r} 需要 license（未找到 license 文件）")
         return LicenseState(feature=feature, mode="free", source="no-license-file")
 
     if not _pubkey_configured():
@@ -261,6 +310,8 @@ def require_license(feature: str = "core") -> LicenseState:
             "warning: 检测到 license 文件但本构建未配置公钥，许可体系未启用，按免费模式运行",
             file=sys.stderr,
         )
+        if feature in PAID_FEATURES:
+            raise LicenseError(1, f"功能 {feature!r} 需要 license（本构建未启用许可体系）")
         return LicenseState(feature=feature, mode="free", source="license-ignored")
 
     # 严格验证路径（付费层启用后生效）
@@ -362,13 +413,19 @@ def _cmd_issue(args) -> int:
 
 
 def _cmd_verify(args) -> int:
+    """退出码（P2-3，与模块 docstring 一致）：
+
+    0 = 通过（免费模式，或有效 license；用 status: 行区分 FREE / OK）
+    1 = 未找到 license 文件（免费模式，不是错误，但脚本可据此判断"有没有 license"）
+    2..7 = 具体失败原因
+    """
     lic_arg = getattr(args, "verify", None)  # --verify [路径]（空串/None = 自动查找）
     lic_path = Path(lic_arg) if lic_arg else _find_license_file()
     if lic_path is None or not lic_path.is_file():
-        print("status: FREE（未找到 license 文件——免费模式）")
+        print("status: FREE（未找到 license 文件——免费模式，exit 1）")
         return 1
     if not _pubkey_configured():
-        print("status: FREE（公钥未配置，许可体系未启用）")
+        print("status: FREE（本构建未配置公钥，许可体系未启用，exit 0）")
         return 0
     try:
         st = require_license(args.feature)
@@ -380,66 +437,109 @@ def _cmd_verify(args) -> int:
 
 
 def _cmd_self_test() -> int:
-    """生成→签发→校验 全链路回归，不污染工作目录（全部写临时目录）。"""
-    with tempfile.TemporaryDirectory() as td:
-        td = Path(td)
-        seed_hex, pub_hex = ed25519_keygen()
-        # 已知答案测试：RFC 8032 Test 1（空消息）
-        kat_seed = "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60"
-        kat_pub = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
-        gen_pub = _encode_point(_scalarmult(_B, _secret_expand(bytes.fromhex(kat_seed)))).hex()
-        assert gen_pub == kat_pub, "RFC 8032 公钥向量失败"
-        os.environ[PUBLIC_KEY_ENV] = pub_hex
-        os.environ[LICENSE_ENV] = str(td / "license.json")
+    """生成→签发→校验 全链路回归，不污染工作目录（全部写临时目录）。
 
-        lic = td / "license.json"
-        data = {
-            "product": PRODUCT,
-            "features": ["probe", "core"],
-            "issued_to": "selftest@local",
-            "issued_at": date.today().isoformat(),
-            "expires": (date.today() + timedelta(days=1)).isoformat(),
-        }
-        data["signature"] = ed25519_sign(seed_hex, _canonical_payload(data))
-        lic.write_text(json.dumps(data), encoding="utf-8")
-        assert require_license("core").mode == "licensed"
+    覆盖：RFC 8032 TEST 1（公钥 + 签名向量）、签发/验签、篡改、过期、越权、
+    免费模式、环境变量公钥在非开发模式被忽略、PAID_FEATURES 拒绝、小阶公钥拒绝。
+    """
+    saved = {k: os.environ.get(k) for k in (PUBLIC_KEY_ENV, LICENSE_ENV, DEV_MODE_ENV)}
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            td = Path(td)
+            # --- RFC 8032 §7.1 TEST 1（空消息）：公钥与签名都要逐字节对上 ---
+            kat_seed = "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60"
+            kat_pub = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
+            kat_sig = (
+                "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e06522490155"
+                "5fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b"
+            )
+            gen_pub = _encode_point(_scalarmult(_B, _secret_expand(bytes.fromhex(kat_seed)))).hex()
+            assert gen_pub == kat_pub, "RFC 8032 公钥向量失败"
+            assert ed25519_sign(kat_seed, b"") == kat_sig, "RFC 8032 签名向量失败"
+            assert ed25519_verify(kat_pub, b"", kat_sig), "RFC 8032 验签向量失败"
+            assert not ed25519_verify(kat_pub, b"x", kat_sig), "错误消息未被拒"
 
-        # 篡改任一字段必须被抓住
-        bad = dict(data, issued_to="attacker@local")
-        bad["signature"] = data["signature"]
-        lic.write_text(json.dumps(bad), encoding="utf-8")
-        try:
-            require_license("core")
-            raise AssertionError("篡改未检出")
-        except LicenseError as e:
-            assert e.code == 2, f"期望 code=2，实际 {e.code}"
+            # --- 小阶公钥必须拒绝（P2-4），即便签名结构自洽 ---
+            small_order_pub = "01" + "00" * 31  # identity 的编码
+            assert not ed25519_verify(small_order_pub, b"", kat_sig), "小阶公钥未被拒"
 
-        # 过期 license
-        expired = dict(data, expires="2020-01-01")
-        expired["signature"] = ed25519_sign(seed_hex, _canonical_payload(expired))
-        lic.write_text(json.dumps(expired), encoding="utf-8")
-        try:
-            require_license("core")
-            raise AssertionError("过期未检出")
-        except LicenseError as e:
-            assert e.code == 3, f"期望 code=3，实际 {e.code}"
+            # --- 非开发模式：环境变量公钥必须被忽略（P1-1） ---
+            seed_hex, pub_hex = ed25519_keygen()
+            os.environ[PUBLIC_KEY_ENV] = pub_hex
+            os.environ.pop(DEV_MODE_ENV, None)
+            assert _active_pubkey() == PUBLIC_KEY_HEX, "非开发模式仍采用了环境变量公钥"
 
-        # 未付费 feature
-        lic.write_text(json.dumps(data), encoding="utf-8")
-        try:
-            require_license("pipeline")
-            raise AssertionError("越权未检出")
-        except LicenseError as e:
-            assert e.code == 4, f"期望 code=4，实际 {e.code}"
+            # --- 开发模式：允许环境变量公钥，走完整验签链路 ---
+            os.environ[DEV_MODE_ENV] = "1"
+            os.environ[LICENSE_ENV] = str(td / "license.json")
+            assert _active_pubkey() == pub_hex
 
-        del os.environ[PUBLIC_KEY_ENV]
-        del os.environ[LICENSE_ENV]
-        # 无 license → 免费全通过
-        st = require_license("pipeline")
-        assert st.mode == "free"
-        st = require_license("probe")
-        assert st.mode == "free"
-    print("self-test PASS：RFC 8032 向量 + 签发/篡改/过期/越权/免费 全部符合预期")
+            lic = td / "license.json"
+            data = {
+                "product": PRODUCT,
+                "features": ["probe", "core"],
+                "issued_to": "selftest@local",
+                "issued_at": date.today().isoformat(),
+                "expires": (date.today() + timedelta(days=1)).isoformat(),
+            }
+            data["signature"] = ed25519_sign(seed_hex, _canonical_payload(data))
+            lic.write_text(json.dumps(data), encoding="utf-8")
+            assert require_license("core").mode == "licensed"
+
+            # 篡改任一字段必须被抓住
+            bad = dict(data, issued_to="attacker@local")
+            lic.write_text(json.dumps(bad), encoding="utf-8")
+            try:
+                require_license("core")
+                raise AssertionError("篡改未检出")
+            except LicenseError as e:
+                assert e.code == 2, f"期望 code=2，实际 {e.code}"
+
+            # 过期 license
+            expired = dict(data, expires="2020-01-01")
+            expired["signature"] = ed25519_sign(seed_hex, _canonical_payload(expired))
+            lic.write_text(json.dumps(expired), encoding="utf-8")
+            try:
+                require_license("core")
+                raise AssertionError("过期未检出")
+            except LicenseError as e:
+                assert e.code == 3, f"期望 code=3，实际 {e.code}"
+
+            # 未付费 feature（license 存在时）
+            lic.write_text(json.dumps(data), encoding="utf-8")
+            try:
+                require_license("pipeline")
+                raise AssertionError("越权未检出")
+            except LicenseError as e:
+                assert e.code == 4, f"期望 code=4，实际 {e.code}"
+
+            # --- 无 license：免费 feature 放行，PAID_FEATURES 拒绝（P1-2） ---
+            os.environ.pop(LICENSE_ENV, None)
+            os.environ.pop(DEV_MODE_ENV, None)
+            os.environ.pop(PUBLIC_KEY_ENV, None)
+            assert require_license("probe").mode == "free"
+            assert require_license("core").mode == "free"
+            old_paid = globals()["PAID_FEATURES"]
+            try:
+                globals()["PAID_FEATURES"] = frozenset({"pipeline"})
+                try:
+                    require_license("pipeline")
+                    raise AssertionError("付费功能未拦截")
+                except LicenseError as e:
+                    assert e.code == 1, f"期望 code=1，实际 {e.code}"
+                assert require_license("core").mode == "free"  # 非付费 feature 不受影响
+            finally:
+                globals()["PAID_FEATURES"] = old_paid
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+    print(
+        "self-test PASS：RFC 8032 公钥+签名向量 + 签发/篡改/过期/越权 + "
+        "免费模式 + 环境变量公钥（非开发忽略 / 开发生效）+ PAID_FEATURES + 小阶公钥拒绝"
+    )
     return 0
 
 

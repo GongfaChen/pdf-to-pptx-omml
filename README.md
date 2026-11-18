@@ -8,9 +8,9 @@
 
 ## 效果演示：真实教材 before / after
 
-**Before** —— AoPS Precalculus 第 6.2 节教材原页（Problem 6.11–6.12，公式与图形混排）：
+**Before** —— AoPS Precalculus 第 6.2 节教材原页（p.200，Problem 6.11–6.12，公式与图形混排）：
 
-![before: 教材原页](assets/before_textbook_p218.jpg)
+![before: 教材原页](assets/before_textbook_p200.jpg)
 
 **After** —— 同一节内容提取成的课件。所有公式（根号、上标、绝对值、下标）
 均为 **原生 OMML**：双击即可编辑，可改字体、可复制进 Word/LaTeX，不是截图、不是图片。
@@ -56,7 +56,7 @@ python scripts/probe_pdf.py <教材.pdf> --report 诊断.md
 SKILL.md                  # Agent 技能主文件（工作流 + 管线判定）
 scripts/
   probe_pdf.py            # PDF 可提取性诊断（只读）：文本层/扫描页/OCR 可疑/图数/公式密度/栏式
-  omml_helpers.py         # OMML 构造库：T/F/S/Q/SQ/RAD/LIM/PAR/ABS/CV/MX/NORM/M
+  omml_helpers.py         # OMML 构造库：T/F/S/Q/SQ/RAD/LIM/PAR/ABS/CV/MX/NORM/M + SUM/PROD/EQARR
   validate_omml.py        # 静态校验器：pptx 体检 + 源码 lint
   audit_layout.py         # 版式审计：字形碰撞 / 溢出 / 页脚三件套
   check_env.py            # 前置环境闸（只读）：依赖矩阵 + COM ProgID + 闸 2 可执行性判定
@@ -104,16 +104,36 @@ probe 诊断 ──→ 定位章节 ──→ 裁图（xref 位图优先 / capti
 ## License / 授权
 
 代码以 MIT 开源。`scripts/license_check.py` 是为未来付费层预埋的**许可证钩子**，
-当前对用户完全透明：
+当前对用户完全透明。分层用两个集合表达，切换时只改集合，不改逻辑：
 
-- **现在**：没有 license 文件 → 所有功能免费全通过（probe 类功能永远免费）。
-  各 CLI 入口调用 `require_license(feature)`，无 license 时静默放行，行为不变。
-- **将来**：若存在 license 文件且公钥已配置，则严格 Ed25519 验签
-  （含有效期与功能范围检查）。签名无效 / 过期 / 越权分别返回退出码 2 / 3 / 4。
-  纯 Python 实现（RFC 8032），零第三方依赖，自带全链路自检：
-  `python scripts/license_check.py --self-test`
-- **切换付费层时**：`--generate-keys` 生成密钥对（私钥不进仓库）→ 替换模块内
-  `PUBLIC_KEY_HEX`（或用环境变量 `PDF2PPTX_OMML_PUBKEY` 注入）→ 新的付费脚本
-  调用 `require_license("pipeline")` 等付费 feature。老用户环境零破坏。
+| 层 | 集合 | 现在的内容 | 无 license 时的行为 |
+|---|---|---|---|
+| 永久免费 | `FREE_FEATURES` | `probe` | 放行 |
+| 免费（开源层） | 其余非付费 feature | `core`（构建/校验/审计/裁图） | 放行 |
+| 付费（预留） | `PAID_FEATURES` | **空** | 退出码 1 并提示获取 license |
+
+- **现在**：`PAID_FEATURES` 为空，所以不放 license 也一切可用；各 CLI 入口在
+  `parse_args()` 之后调用 `require_license(feature)`，无 license 时静默放行。
+- **将来**：把付费 feature（如 `pipeline`）加入 `PAID_FEATURES` 即可生效；存在
+  license 且公钥已配置时走严格 Ed25519 验签（签名 → 产品 → 有效期 → 功能范围）。
+- **换钥**：`--generate-keys` 生成密钥对（私钥**不进仓库**）→ 替换模块内
+  `PUBLIC_KEY_HEX` 后重新发布。环境变量 `PDF2PPTX_OMML_PUBKEY` **只在开发模式**
+  （`PDF2PPTX_OMML_DEV=1`）生效并打印警告；发布构建会忽略它——否则任何人都能
+  换成自己的公钥自签 license，付费闸形同虚设。
+- **实现与性能**：纯 Python RFC 8032（零第三方依赖），实测校验 **152–163 ms/次**（约 0.16 s）；
+  故意不做结果缓存——缓存文件用户可写，等于给付费闸开后门。
+  全链路自检：`python scripts/license_check.py --self-test`
+  （含 RFC 8032 公钥/签名向量、篡改/过期/越权、免费模式、小阶公钥拒绝）。
+
+`license_check.py --verify` 退出码：
+
+| 码 | 含义 |
+|---|---|
+| 0 | 通过（免费模式或有效 license；用 `status: FREE` / `status: OK` 区分） |
+| 1 | 未找到 license 文件（免费模式，非错误）／ 付费功能被拒 |
+| 2 / 3 / 4 / 5 / 6 / 7 | 签名无效 / 已过期 / 产品或功能不符 / 格式损坏 / 机器绑定不符 / 内部错误 |
+
+> 素材说明：`assets/` 下的教材页截图版权归 AoPS 所有，仅作效果展示，**不在 MIT 授权范围内**；
+> 工具本身只处理用户自有或已获授权的文件。详见 `assets/README.md`。
 
 MIT
