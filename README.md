@@ -1,7 +1,7 @@
 # pdf-to-pptx-omml
 
 [![Release](https://img.shields.io/github/v/release/GongfaChen/pdf-to-pptx-omml?sort=semver&color=2f81f7)](https://github.com/GongfaChen/pdf-to-pptx-omml/releases)
-[![CI](https://github.com/GongfaChen/pdf-to-pptx-omml/actions/workflows/ci.yml/badge.svg)](https://github.com/GongfaChen/pdf-to-pptx-omml/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/GongfaChen/pdf-to-pptx-omml/ci.yml?branch=main&label=CI)](https://github.com/GongfaChen/pdf-to-pptx-omml/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/GongfaChen/pdf-to-pptx-omml?color=green)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20PowerPoint-0078D6?logo=windows&logoColor=white)](README.md)
