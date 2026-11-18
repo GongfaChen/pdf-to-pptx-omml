@@ -21,10 +21,15 @@ import sys
 from pathlib import Path
 
 try:
-    import fitz  # pymupdf
+    # PyMuPDF ≥1.24.3 的推荐导入名；`fitz` 别名已弃用（会打 FutureWarning），
+    # 保留 fallback 以兼容老版本（requirements.txt 已限 <3）。
+    import pymupdf as fitz
 except ImportError:
-    print("缺少依赖：pip install pymupdf", file=sys.stderr)
-    sys.exit(2)
+    try:
+        import fitz  # 老版本 PyMuPDF 只有 fitz
+    except ImportError:
+        print("缺少依赖：pip install pymupdf", file=sys.stderr)
+        sys.exit(2)
 
 MATH_CHARS = set(
     "∑∫∏√±×÷≤≥≠≈∞∂∇°′″"

@@ -3,7 +3,7 @@
 [![Release](https://img.shields.io/github/v/release/GongfaChen/pdf-to-pptx-omml?sort=semver&color=2f81f7)](https://github.com/GongfaChen/pdf-to-pptx-omml/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/GongfaChen/pdf-to-pptx-omml/ci.yml?branch=main&label=CI)](https://github.com/GongfaChen/pdf-to-pptx-omml/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/GongfaChen/pdf-to-pptx-omml?color=green)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.9%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20PowerPoint-0078D6?logo=windows&logoColor=white)](README.md)
 
 **把 PDF 教材章节变成公式完全可编辑的 PPT**——公式转 OMML（PowerPoint 原生数学对象，双击就能改），
@@ -44,7 +44,7 @@
 ## 快速开始
 
 ```bash
-# 依赖（Python 3.9+；渲染核验需 Windows + 本机 PowerPoint）
+# 依赖（Python 3.12+；渲染核验需 Windows + 本机 PowerPoint）
 pip install -r requirements.txt
 
 # 1. 环境自检：构建一个含全套公式类型的 PPTX，验证 PowerPoint 能打开
@@ -60,6 +60,7 @@ python scripts/probe_pdf.py <教材.pdf> --report 诊断.md
 
 ```
 SKILL.md                  # Agent 技能主文件（工作流 + 管线判定）
+SECURITY.md               # 安全策略与漏洞报告渠道（私密 Advisory）
 requirements.txt          # 依赖（含 pywin32 的 Windows 平台标记）
 scripts/
   probe_pdf.py            # PDF 可提取性诊断（只读）：文本层/扫描页/OCR 可疑/图数/公式密度/栏式
@@ -105,11 +106,18 @@ probe 诊断 ──→ 定位章节 ──→ 裁图（xref 位图优先 / capti
 
 ## 路线图
 
-- [x] v0.1 开源核心：probe + OMML helper 库 + 双校验器 + 审计脚本 + 45 坑参考
+- [x] v0.1 开源核心：probe + OMML helper 库 + 双校验器 + 审计脚本
+- [x] v0.2 护栏补强：坑 45（`_Frag` 拼接退化）、结构感知 fallback、SUM/PROD/EQARR、环境闸 `check_env`、裁图 CLI、公式渲染断言
+- [x] v0.3 许可证钩子：纯 Python Ed25519（RFC 8032）、keygen / issue / verify CLI、`.gitignore` 挡私钥
+- [x] v0.3.1 许可安全加固：环境公钥仅 dev 模式、小阶公钥拒绝、`PAID_FEATURES` 分层、RFC 8032 签名向量、闸门移到 argparse 之后
+- [x] CI：GitHub Actions（Linux × Python 3.12/3.13，10 步静态校验 + 构建 + probe）
 - [ ] 批量章节模式（一次跑整本书，断点续跑）
 - [ ] 多模板（学术蓝 / 极简黑白 / 学校 VI）
 - [ ] 英文教材双语注释页自动生成
 - [ ] 商业化：免费 probe + 按章付费解锁生产级流水线（支付宝 AI 付 A2M/402，评估中）
+
+> 版本对应：v0.1→`3de474f`，v0.2→`7d6ff38`，v0.3→`efdbcdf`，v0.3.1→`2d6f4eb`（tag 早于 CI/`requirements.txt`，
+> 直接从 `main` 克隆可获得完整工程化文件）。
 
 ## License / 授权
 

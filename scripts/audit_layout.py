@@ -21,10 +21,14 @@ import sys
 from pathlib import Path
 
 try:
-    import fitz
+    # 优先用 pymupdf 新名字（fitz 别名已弃用）；老版本回退 fitz。
+    import pymupdf as fitz
 except ImportError:
-    print("缺少依赖：pip install pymupdf", file=sys.stderr)
-    sys.exit(2)
+    try:
+        import fitz
+    except ImportError:
+        print("缺少依赖：pip install pymupdf", file=sys.stderr)
+        sys.exit(2)
 
 PT_PER_IN = 72.0
 
