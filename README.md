@@ -16,9 +16,10 @@
 
 扫描版教材页（无文字层）→ 公式为原生 OMML 的课件 → 双击公式直接改数值 → 三道闸审计交付：
 
-![demo: 扫描版教材 → 公式可编辑课件](assets/demo_workflow.gif)
+<video src="https://github.com/user-attachments/assets/2594347c-2980-4db6-8793-b43b8eb04286" width="960" controls></video>
 
-> 动图 1.7 MB（960×540，35 帧），取自真实录屏，动作帧做了抽取、时长保持 27 秒。
+> 视频 807 KB（960×540，27 秒），取自真实录屏。
+> 渲染器不支持 `<video>` 时（PyPI、VS Code 等），可看静态兜底版：[demo_workflow.gif](assets/demo_workflow.gif)。
 
 ## 效果演示：真实教材 before / after
 
