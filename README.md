@@ -1,5 +1,7 @@
 # pdf-to-pptx-omml
 
+[English](README.en.md) | 简体中文
+
 [![Release](https://img.shields.io/github/v/release/GongfaChen/pdf-to-pptx-omml?sort=semver&color=2f81f7)](https://github.com/GongfaChen/pdf-to-pptx-omml/releases)
 [![CI](https://img.shields.io/github/actions/workflow/status/GongfaChen/pdf-to-pptx-omml/ci.yml?branch=main&label=CI)](https://github.com/GongfaChen/pdf-to-pptx-omml/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/GongfaChen/pdf-to-pptx-omml?color=green)](LICENSE)
@@ -11,6 +13,10 @@
 
 > 适用：国内理工科教材与讲义（含扫描版）/ AoPS / IB / Cambridge → 课件。
 > 目标用户：高校教师、教研团队、课件制作者、辅导机构。
+
+> **配套仓库**：[back-translate-refinement](https://github.com/GongfaChen/back-translate-refinement)
+> —— 中译英学术翻译的确定性保真闸（回译比对 + 10 项硬检查 + 可转发质检报告）。
+> 需要把讲义/论文稿翻成英文时，用它在翻译环节兜底。
 
 ## 一图看懂（27 秒）
 
