@@ -94,6 +94,7 @@ python scripts/probe_pdf.py <教材.pdf> --report 诊断.md
 
 ```
 SKILL.md                  # Agent 技能主文件（工作流 + 管线判定）
+README.en.md              # 英文版 README（本文件的中英对照入口在顶部）
 SECURITY.md               # 安全策略与漏洞报告渠道（私密 Advisory）
 requirements.txt          # 依赖（含 pywin32 的 Windows 平台标记）
 scripts/
@@ -144,7 +145,7 @@ probe 诊断 ──→ 定位章节 ──→ 裁图（xref 位图优先 / capti
 - [x] v0.2 护栏补强：坑 45（`_Frag` 拼接退化）、结构感知 fallback、SUM/PROD/EQARR、环境闸 `check_env`、裁图 CLI、公式渲染断言
 - [x] v0.3 许可证钩子：纯 Python Ed25519（RFC 8032）、keygen / issue / verify CLI、`.gitignore` 挡私钥
 - [x] v0.3.1 许可安全加固：环境公钥仅 dev 模式、小阶公钥拒绝、`PAID_FEATURES` 分层、RFC 8032 签名向量、闸门移到 argparse 之后
-- [x] CI：GitHub Actions（Linux × Python 3.12/3.13，10 步静态校验 + 构建 + probe）
+- [x] CI：GitHub Actions（Ubuntu × Python 3.12/3.13，9 个 step：自检 / 许可 / lint / 构建+静态校验 / probe / 产物上传）
 - [ ] 批量章节模式（一次跑整本书，断点续跑）
 - [ ] 多模板（学术蓝 / 极简黑白 / 学校 VI）
 - [ ] 英文教材双语注释页自动生成

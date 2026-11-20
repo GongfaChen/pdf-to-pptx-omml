@@ -6,6 +6,7 @@ English | [简体中文](README.md)
 [![CI](https://img.shields.io/github/actions/workflow/status/GongfaChen/pdf-to-pptx-omml/ci.yml?branch=main&label=CI)](https://github.com/GongfaChen/pdf-to-pptx-omml/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/GongfaChen/pdf-to-pptx-omml?color=green)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20PowerPoint-0078D6?logo=windows&logoColor=white)](README.md)
 
 **Turn PDF textbook chapters into slides with fully editable equations** —
 equations become OMML (PowerPoint's native math objects, double-click to edit),
@@ -28,7 +29,9 @@ double-click, edit a value → three-gate audit before delivery:
 > 807 KB, 960×540, from a real session. Static fallback:
 > [demo_workflow.gif](assets/demo_workflow.gif).
 
-## Before / after: AoPS Precalculus
+## Before / after: real textbooks
+
+### AoPS Precalculus (p.200)
 
 **Before** — AoPS *Precalculus* §6.2, p.200 (Problem 6.11–6.12, equations
 interleaved with figures):
@@ -44,13 +47,24 @@ absolute values, subscripts) is native OMML:
 
 ### Chinese textbook (scanned, no text layer)
 
-A page from a Chinese *Mechanics of Materials* textbook (p.60, torque on
-transmission shafts). The page is **scanned with no text layer** — copy-paste
-style converters fail outright here; the equations are visually transcribed and
-verified through the three-gate audit:
+**Before** — a page from a Chinese *Mechanics of Materials* textbook (p.60, torque on
+transmission shafts). The page is **scanned with no text layer** — copy-paste style
+converters fail outright here:
 
 ![before: scanned page](assets/before_matl_p60.png)
+
+**After** — the same section (§3-3) as a slide. The power-transmission formula
+(fractions, unit subscripts, unit conventions and footnote) is native OMML:
+double-click to edit, change fonts, copy into Word/LaTeX. The figure is located by
+caption (Fig. 3-6) and cropped at 300 dpi. Equations on scanned pages are visually
+transcribed and verified through the three-gate audit:
+
 ![after: native OMML slide](assets/after_matl_slide_3_3.png)
+
+> Caveat: this slide is an excerpt — two transition sentences at the start of §3-3 are
+> not on the slide, and the original brace notation `{P}_{kW}` is typeset as `(P)_{kW}`.
+> The shear Hooke's law τ = Gγ at the top of p.60 belongs to §3-2 and is not part of
+> this example.
 
 > Textbook page screenshots are for demonstration only; copyright stays with
 > the original publishers. The tool only processes files you own.
@@ -76,6 +90,19 @@ python demo/smoke_test.py            # builds a PPTX with every construct, verif
 python scripts/probe_pdf.py <book.pdf> --report diagnosis.md   # read-only, free
 # then follow SKILL.md: probe → crop figures → build → three-gate audit
 ```
+
+## Status
+
+- **CI**: GitHub Actions, Ubuntu × Python 3.12 / 3.13, 9 steps — OMML helper self-check,
+  license self-test, source lint, build + static validation, synthetic-PDF probe, deck
+  artifact upload. Green on `main` ([runs](https://github.com/GongfaChen/pdf-to-pptx-omml/actions/workflows/ci.yml)).
+- **Windows + PowerPoint (real machine)**: every construct renders as Cambria Math
+  glyphs with no placeholder text; the layout audit reports 0 collisions / 0 overflow.
+- **Reproducible demo**: `python demo/smoke_test.py` builds a deck with all equation
+  types and validates it; `scripts/probe_pdf.py` is read-only and free.
+- **Repo layout**: `scripts/` (probe, OMML helpers, validators, layout audit),
+  `demo/` (smoke test), `references/` (45 pitfalls + cookbook), `assets/` (screenshots).
+  Full workflow: [`SKILL.md`](SKILL.md).
 
 ## Honest limits
 
