@@ -4,6 +4,9 @@ README 效果演示用的截图/图片。
 
 ## 版权与授权边界
 
+- `before_matl_p60.png` —— 国内《材料力学》教材"扭转"章节原页截图（p.60，扫描版），
+  **版权归原出版社所有**，此处仅作"输入长什么样"的效果展示。
+- `after_matl_slide_3_3.png` —— 用本工具把同一节提取成的课件截图（公式为原生 OMML）。
 - `before_textbook_p200.jpg` —— AoPS *Precalculus*（第 6 章 p.200）教材页截图，
   **版权归 Art of Problem Solving (AoPS) 所有**，此处仅作"输入长什么样"的效果展示。
 - `after_slide_magnitude.png` / `after_slide_solution_6_12.jpg` —— 用本工具把同一节内容
